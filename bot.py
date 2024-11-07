@@ -7,7 +7,7 @@ import requests
 # Your bot token
 API_TOKEN = '8186839066:AAFbAkbYq51Nrw6IhsgpKENG9wvEOUPi_FU'
 CHANNEL_URL = 'https://t.me/+gtIRQIKVvXdkYjdk'
-WEBHOOK_URL = 'https://hooks.zapier.com/hooks/catch/13255128/2586sui/'
+WEBHOOK_URL = 'https://s5.apix-drive.com/web-hooks/37136/rylgmsbl'
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)

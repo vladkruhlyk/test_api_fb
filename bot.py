@@ -4,10 +4,15 @@ from aiogram.utils.executor import start_webhook
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 import requests
 from flask import Flask
+import json
+import uuid
+from datetime import datetime
 
+# Telegram bot token and other constants
 API_TOKEN = '8186839066:AAFbAkbYq51Nrw6IhsgpKENG9wvEOUPi_FU'
 CHANNEL_URL = 'https://t.me/+gtIRQIKVvXdkYjdk'
-WEBHOOK_URL = 'https://hooks.zapier.com/hooks/catch/13255128/2586sui/'
+FB_ACCESS_TOKEN = 'EAAMrsBFmyrQBO4zBusgTt5e2G6GQZBD8pPVT0JQZBuVf0McP3vlssBEzLUrRjfypeLMvKbcDRA9UbdrcbSaRXZAayiTQVIqJWcoD2wmPr2swecU8UkJWbsyOzKZBqjVe9yAX0LdV3NDGpvQ8U4vFDvIF7BvzCI8IiHwxjkIdkZAIkFEwv6jhExP1xwKaPA4UvvgZDZD'
+FB_PIXEL_ID = '750751157229255'
 
 # Webhook settings
 WEBHOOK_PATH = f"/bot/{API_TOKEN}"
@@ -27,11 +32,45 @@ async def send_welcome(message: types.Message):
     markup.add(button)
     await message.reply("Подпишись на наш канал и получай бесплатные сигналы", reply_markup=markup)
 
+# Function to send event to Facebook Conversion API
+def send_fb_conversion(user_id, username):
+    url = f'https://graph.facebook.com/v13.0/{FB_PIXEL_ID}/events'
+    headers = {
+        'Content-Type': 'application/json'
+    }
+    data = {
+        "data": [
+            {
+                "event_name": "Lead",
+                "event_time": int(datetime.now().timestamp()),
+                "event_source_url": CHANNEL_URL,
+                "user_data": {
+                    "client_user_agent": "TelegramBot",
+                    "external_id": str(user_id),
+                    "fb_login_id": username
+                },
+                "action_source": "website",
+                "event_id": str(uuid.uuid4())  # уникальный ID события
+            }
+        ],
+        "access_token": FB_ACCESS_TOKEN
+    }
+    response = requests.post(url, headers=headers, json=data)
+    return response.status_code, response.text
+
 # Handler for "Get Access" button click
 @dp.callback_query_handler(lambda c: c.data == 'get_access')
 async def process_callback_button(callback_query: types.CallbackQuery):
+    # Send message with the channel link
     await bot.send_message(callback_query.from_user.id, f"Подпишись на наш канал: {CHANNEL_URL}")
-    requests.post(WEBHOOK_URL, json={"user_id": callback_query.from_user.id, "username": callback_query.from_user.username})
+
+    # Send conversion event to Facebook API
+    status_code, response_text = send_fb_conversion(callback_query.from_user.id, callback_query.from_user.username)
+    if status_code == 200:
+        print("Event sent to Facebook successfully.")
+    else:
+        print(f"Failed to send event to Facebook: {response_text}")
+
     await callback_query.answer("Доступ предоставлен")
 
 @app.route('/')

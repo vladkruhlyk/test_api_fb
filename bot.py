@@ -1,20 +1,33 @@
 import os
+import logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.utils.executor import start_webhook
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 import requests
-from flask import Flask
 import json
 import uuid
 from datetime import datetime
+from flask import Flask
 
-# Telegram bot token and other constants
-API_TOKEN = '7962440273:AAFil5umD5oL8_tPFqbivsUXv-iG5clW2XI'
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("bot.log"),
+        logging.StreamHandler()
+    ]
+)
+
+logger = logging.getLogger(__name__)
+
+# Telegram и Facebook API токены и ID пикселя
+API_TOKEN = '8186839066:AAFbAkbYq51Nrw6IhsgpKENG9wvEOUPi_FU'
 CHANNEL_URL = 'https://t.me/+gtIRQIKVvXdkYjdk'
-FB_ACCESS_TOKEN = 'EAAMrsBFmyrQBO4bYFxLabLzZAUwmi33ppD6Ef4CauaigAIfAmBVk4ZCZAFkZBuOo47yeXBSSMZBc2uwoS8rKo1ma0dNnHVlOFadyaBc4CeeGpI7vgPZC7Bok8dmUqP2dMZAZCwlZBQ1EVGZCf9kahhVWcLN4WwvFF84rN7WGrYRkZBoR6TrMZChQj905CYtQIdDZA0x64VQZDZD'
-FB_PIXEL_ID = '2386094468412808'
+FB_ACCESS_TOKEN = 'YOUR_FACEBOOK_ACCESS_TOKEN'
+FB_PIXEL_ID = 'YOUR_FACEBOOK_PIXEL_ID'
 
-# Webhook settings
+# Параметры вебхука
 WEBHOOK_PATH = f"/bot/{API_TOKEN}"
 WEBAPP_HOST = '0.0.0.0'
 WEBAPP_PORT = int(os.environ.get('PORT', 5000))
@@ -24,15 +37,19 @@ dp = Dispatcher(bot)
 
 app = Flask(__name__)
 
-# Handler for /start command
+# Логирование старта
+logger.info("Bot is starting...")
+
+# Обработчик команды /start
 @dp.message_handler(commands=['start'])
 async def send_welcome(message: types.Message):
+    logger.info(f"Received /start command from {message.from_user.id} ({message.from_user.username})")
     markup = InlineKeyboardMarkup()
     button = InlineKeyboardButton("Получить доступ", callback_data="get_access")
     markup.add(button)
     await message.reply("Подпишись на наш канал и получай бесплатные сигналы", reply_markup=markup)
 
-# Function to send event to Facebook Conversion API
+# Функция для отправки события в Facebook Conversion API
 def send_fb_conversion(user_id, username):
     url = f'https://graph.facebook.com/v13.0/{FB_PIXEL_ID}/events'
     headers = {
@@ -50,26 +67,27 @@ def send_fb_conversion(user_id, username):
                     "fb_login_id": username
                 },
                 "action_source": "website",
-                "event_id": str(uuid.uuid4())  # уникальный ID события
+                "event_id": str(uuid.uuid4())
             }
         ],
         "access_token": FB_ACCESS_TOKEN
     }
     response = requests.post(url, headers=headers, json=data)
+    logger.info(f"Sent event to Facebook for user {user_id} ({username}): Status {response.status_code}, Response {response.text}")
     return response.status_code, response.text
 
-# Handler for "Get Access" button click
+# Обработчик нажатия на кнопку "Получить доступ"
 @dp.callback_query_handler(lambda c: c.data == 'get_access')
 async def process_callback_button(callback_query: types.CallbackQuery):
-    # Send message with the channel link
+    logger.info(f"User {callback_query.from_user.id} ({callback_query.from_user.username}) clicked 'Get Access'")
     await bot.send_message(callback_query.from_user.id, f"Подпишись на наш канал: {CHANNEL_URL}")
 
-    # Send conversion event to Facebook API
+    # Отправка события в Facebook API и логирование
     status_code, response_text = send_fb_conversion(callback_query.from_user.id, callback_query.from_user.username)
     if status_code == 200:
-        print("Event sent to Facebook successfully.")
+        logger.info("Event sent to Facebook successfully.")
     else:
-        print(f"Failed to send event to Facebook: {response_text}")
+        logger.error(f"Failed to send event to Facebook: {response_text}")
 
     await callback_query.answer("Доступ предоставлен")
 
@@ -77,12 +95,14 @@ async def process_callback_button(callback_query: types.CallbackQuery):
 def home():
     return "Bot is running"
 
-# Setting up webhook
+# Настройка вебхука
 async def on_startup(dp):
     await bot.set_webhook(f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}{WEBHOOK_PATH}")
+    logger.info("Webhook has been set.")
 
 async def on_shutdown(dp):
     await bot.delete_webhook()
+    logger.info("Webhook has been removed.")
 
 if __name__ == '__main__':
     start_webhook(

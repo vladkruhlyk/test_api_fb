@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime
 
 # Telegram bot token and other constants
-API_TOKEN = '8186839066:AAFbAkbYq51Nrw6IhsgpKENG9wvEOUPi_FU'
+API_TOKEN = '7962440273:AAFil5umD5oL8_tPFqbivsUXv-iG5clW2XI'
 CHANNEL_URL = 'https://t.me/+gtIRQIKVvXdkYjdk'
 FB_ACCESS_TOKEN = 'EAAMrsBFmyrQBO4zBusgTt5e2G6GQZBD8pPVT0JQZBuVf0McP3vlssBEzLUrRjfypeLMvKbcDRA9UbdrcbSaRXZAayiTQVIqJWcoD2wmPr2swecU8UkJWbsyOzKZBqjVe9yAX0LdV3NDGpvQ8U4vFDvIF7BvzCI8IiHwxjkIdkZAIkFEwv6jhExP1xwKaPA4UvvgZDZD'
 FB_PIXEL_ID = '750751157229255'
